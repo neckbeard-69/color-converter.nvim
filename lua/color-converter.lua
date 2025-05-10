@@ -131,43 +131,56 @@ end
 
 --- Gets the color under the cursor, if any.
 --- @return color|nil
-local function get_color_under_cursor()
+
+local function get_color()
   local current_line = vim.api.nvim_get_current_line()
-  local cursor = vim.api.nvim_win_get_cursor(0)
-  local cursor_col = cursor[2]
+  local cursor_col = vim.api.nvim_win_get_cursor(0)[2]
+  local detect_line = config.options.detect_entire_line
+
+  local matches = {}
+
+  local function check_match(startpos, endpos)
+    if detect_line then
+      return true
+    end
+    return startpos - 1 <= cursor_col and endpos - 2 >= cursor_col
+  end
 
   for startpos, match, endpos in current_line:gmatch("()(hsla?%([^)]+%))()") do
-    if startpos - 1 <= cursor_col and endpos - 2 >= cursor_col then
-      return {
+    if check_match(startpos, endpos) then
+      table.insert(matches, {
         type = "hsl",
         color_string = match,
         startpos = startpos,
         endpos = endpos - 1,
-      }
+      })
     end
   end
+
   for startpos, match, endpos in current_line:gmatch("()(rgba?%([^)]+%))()") do
-    if startpos - 1 <= cursor_col and endpos - 2 >= cursor_col then
-      return {
+    if check_match(startpos, endpos) then
+      table.insert(matches, {
         type = "rgb",
         color_string = match,
         startpos = startpos,
         endpos = endpos - 1,
-      }
+      })
     end
   end
-  for startpos, match, endpos in current_line:gmatch("()(#%w+)()") do
-    if startpos - 1 <= cursor_col and endpos - 2 >= cursor_col then
-      return {
+
+  for startpos, match, endpos in current_line:gmatch("()(#%x%x%x%x%x%x)()") do
+    if check_match(startpos, endpos) then
+      table.insert(matches, {
         type = "hex",
         color_string = match,
         startpos = startpos,
         endpos = endpos - 1,
-      }
+      })
     end
   end
 
-  return nil
+  -- pick the first match if there's more than one
+  return matches[1]
 end
 
 --- Replaces the color under the cursor with a new one.
@@ -189,7 +202,7 @@ end
 
 M.to_rgb = function(opts)
   opts = opts or {}
-  local current_color = get_color_under_cursor()
+  local current_color = get_color()
   if not current_color then
     return nil
   end
@@ -210,7 +223,7 @@ end
 
 M.to_hex = function(opts)
   opts = opts or {}
-  local current_color = get_color_under_cursor()
+  local current_color = get_color()
   if not current_color then
     return nil
   end
@@ -231,7 +244,7 @@ end
 
 M.to_hsl = function(opts)
   opts = opts or {}
-  local current_color = get_color_under_cursor()
+  local current_color = get_color()
   if not current_color then
     return nil
   end
@@ -255,7 +268,7 @@ end
 M.cycle = function()
   -- NOTE: The cycle order is the following: HEX => RGB => HSL => HEX.
 
-  local current_color = get_color_under_cursor()
+  local current_color = get_color()
   if not current_color then
     return nil
   end
@@ -276,7 +289,7 @@ end
 
 --- Show a select list allowing the user to pick which format to convert to.
 M.pick = function()
-  local current_color = get_color_under_cursor()
+  local current_color = get_color()
   if not current_color then
     print("No color found under the cursor.")
     return

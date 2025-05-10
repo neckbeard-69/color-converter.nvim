@@ -63,6 +63,7 @@ yourself. These functions are the following:
 {
   round_hsl = true, -- rounds saturation and light when generating HSL colors.
   lowercase_hex = false, -- by default HEX colors will be uppercased.
+  detect_entire_line = false, -- detects color only under the cursor by default, detects the first color on the entire line if set to true
   hsl_pattern = "hsl([h]deg [s] [l])",
   hsla_pattern = "hsl([h]deg [s] [l] / [a]%)",
   rgb_pattern = "rgb([r] [g] [b])",
